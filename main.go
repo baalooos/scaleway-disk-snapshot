@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 
 	"os"
 	"strconv"
@@ -139,15 +140,23 @@ func main() {
 	if !validate {
 		panic("You must set DEFAULT_REGION")
 	}
+	//Get the region from the Env Variable
+	snapshot_region, err := scw.ParseRegion(default_region)
+	if err != nil {
+		panic(err)
+	}
 	default_az, validate := os.LookupEnv("DEFAULT_AZ")
 	if !validate {
 		panic("You must set DEFAULT_AZ")
 	}
-
-	//TODO improve this
-	var snapshot_az scw.Zone
-	if default_az == "fr-par-1" {
-		snapshot_az = scw.ZoneFrPar1
+	// Get the zone from the Env Variable
+	snapshot_az, err := scw.ParseZone(default_az)
+	if err != nil {
+		panic(err)
+	}
+	// Check if our Az is in our Region
+	if !slices.Contains(scw.Region.GetZones(snapshot_region), snapshot_az) {
+		panic("The default_AZ must be in the Default_Region")
 	}
 
 	disk_id, validate := os.LookupEnv("DISK_ID")
@@ -171,7 +180,7 @@ func main() {
 	client, err := scw.NewClient(
 		scw.WithDefaultOrganizationID(organizationID),
 		scw.WithAuth(scw_access_key, scw_secret_key),
-		scw.WithDefaultRegion(scw.Region(default_region)),
+		scw.WithDefaultRegion(scw.Region(snapshot_region)),
 	)
 	if err != nil {
 		panic(err)

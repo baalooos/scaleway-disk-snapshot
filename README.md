@@ -18,7 +18,7 @@ This program read your env variables and expect to find the following variables:
 | ORGANIZATION_ID  | yes  | Your organization ID|
 | PROJECT_ID | yes  | Your project ID|
 | DEFAULT_REGION | yes  | The default region to use. Values are fr-par, nl-ams, pl-waw |
-| DEFAULT_AZ | yes  | The default Az to use. Only fr-par-1 supported right now |
+| DEFAULT_AZ | yes  | The default Az to use |
 | DISK_ID  | yes  | ID of the disk to snapshot|
 | SNAPSHOT_NUMBER  | yes  | Number of snapshots to keep|
 | EXPORT_TO_S3  | yes  | Do your want to export the snapshot to S3? Value is true/false|
