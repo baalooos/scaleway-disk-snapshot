@@ -49,7 +49,7 @@ func priv_export_to_s3(snapshot_id string, snapshot_name string, bucket string, 
 	// Export Snapshot to S3 Bucket
 	fmt.Println("Exporting Snapshot")
 	export_snapshot, err := instanceApi.ExportSnapshot(&instance.ExportSnapshotRequest{
-		Zone:       scw.ZoneFrPar1,
+		Zone:       zone,
 		SnapshotID: snapshot_id,
 		Bucket:     bucket,
 		Key:        snapshot_name,
@@ -135,11 +135,25 @@ func main() {
 	if !validate {
 		panic("You must set PROJECT_ID")
 	}
+	default_region, validate := os.LookupEnv("DEFAULT_REGION")
+	if !validate {
+		panic("You must set DEFAULT_REGION")
+	}
+	default_az, validate := os.LookupEnv("DEFAULT_AZ")
+	if !validate {
+		panic("You must set DEFAULT_AZ")
+	}
+
+	//TODO improve this
+	var snapshot_az scw.Zone
+	if default_az == "fr-par-1" {
+		snapshot_az = scw.ZoneFrPar1
+	}
+
 	disk_id, validate := os.LookupEnv("DISK_ID")
 	if !validate {
 		panic("You must set DISK_ID")
 	}
-
 	string_snapshot_number, validate := os.LookupEnv("SNAPSHOT_NUMBER")
 	if !validate {
 		panic("You must set SNAPSHOT_NUMBER")
@@ -155,12 +169,9 @@ func main() {
 
 	// Create a Scaleway client
 	client, err := scw.NewClient(
-		// Get your organization ID at https://console.scaleway.com/organization/settings
 		scw.WithDefaultOrganizationID(organizationID),
-		// Get your credentials at https://console.scaleway.com/iam/api-keys
 		scw.WithAuth(scw_access_key, scw_secret_key),
-		// Get more about our availability zones at https://www.scaleway.com/en/docs/console/my-account/reference-content/products-availability/
-		scw.WithDefaultRegion("fr-par"),
+		scw.WithDefaultRegion(scw.Region(default_region)),
 	)
 	if err != nil {
 		panic(err)
@@ -170,13 +181,14 @@ func main() {
 	instanceApi := instance.NewAPI(client)
 
 	// Create Snapshot
-	snapshot_id, err := priv_create_snapshot(disk_id, snapshot_name, project_id, instanceApi, scw.ZoneFrPar1)
+	//TODO add a tag and use it to protect manually made snapshots
+	snapshot_id, err := priv_create_snapshot(disk_id, snapshot_name, project_id, instanceApi, snapshot_az)
 	if err != nil {
 		panic(err)
 	}
 
 	// Wait for Snapshot createion
-	err = priv_wait_for_snapshot(snapshot_id, instanceApi, scw.ZoneFrPar1)
+	err = priv_wait_for_snapshot(snapshot_id, instanceApi, snapshot_az)
 	if err != nil {
 		panic(err)
 	}
@@ -194,14 +206,14 @@ func main() {
 			panic("You must set BUCKET_NAME")
 		}
 
-		err = priv_export_to_s3(snapshot_id, snapshot_name, bucket, instanceApi, scw.ZoneFrPar1)
+		err = priv_export_to_s3(snapshot_id, snapshot_name, bucket, instanceApi, snapshot_az)
 		if err != nil {
 			panic(err)
 		}
 	}
 
 	// LIST Snapshot
-	snapshot_list, err := list_snapshot(disk_id, instanceApi, scw.ZoneFrPar1)
+	snapshot_list, err := list_snapshot(disk_id, instanceApi, snapshot_az)
 	if err != nil {
 		panic(err)
 	}
@@ -209,6 +221,7 @@ func main() {
 	fmt.Println("Number of Snapshot")
 	fmt.Println(snapshot_list.TotalCount)
 
+	// TODO Use an array to sort every snapshot
 	oldest := snapshot_list.Snapshots[0]
 	for _, snap := range snapshot_list.Snapshots {
 		if snap.CreationDate.Unix() < oldest.CreationDate.Unix() {
@@ -216,10 +229,11 @@ func main() {
 		}
 	}
 
+	// TODO add the possibility to delete multiple snapshot if the number is higer than snapshot_number + 1
 	if snapshot_list.TotalCount > uint32(snapshot_number) {
 		// DELETE Snapshot
 		fmt.Println(oldest.ID)
-		err = priv_delete_snapshot(oldest.ID, instanceApi, scw.ZoneFrPar1)
+		err = priv_delete_snapshot(oldest.ID, instanceApi, snapshot_az)
 		if err != nil {
 			panic(err)
 		}
