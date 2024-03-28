@@ -141,7 +141,7 @@ func main() {
 	}
 
 	string_snapshot_number, validate := os.LookupEnv("SNAPSHOT_NUMBER")
-	if !validate && string_snapshot_number == "true" {
+	if !validate {
 		panic("You must set SNAPSHOT_NUMBER")
 	}
 	snapshot_number, err := strconv.Atoi(string_snapshot_number)
