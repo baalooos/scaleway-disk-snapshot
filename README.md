@@ -1,6 +1,6 @@
 # scaleway-disk-snapshot
 
-Go program to snashot and export to S3 Scaleway disk.
+Go program to snapshot and export to S3 Scaleway disk.
 
 ## Usage
 
