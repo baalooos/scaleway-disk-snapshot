@@ -150,7 +150,6 @@ func priv_wait_for_export(snapshot_id string, instanceApi *instance.API, zone sc
 		Zone:       zone,
 		SnapshotID: snapshot_id,
 	})
-	fmt.Println(err)
 	if err != nil {
 		return err
 	} else {
@@ -197,8 +196,7 @@ func main() {
 	my_snapshot_config := get_env_var()
 
 	// Forge snapshot name
-	now := time.Now()
-	snapshot_name := fmt.Sprint("snapshot.", now.Unix())
+	snapshot_name := fmt.Sprint("snapshot.", time.Now().Unix())
 
 	// tags array
 	snapshot_tags := []string{"automatic"}
