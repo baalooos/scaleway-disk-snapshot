@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 
@@ -21,7 +22,10 @@ type snapshot_config struct {
 	snapshot_az     scw.Zone
 	disk_id         string
 	snapshot_number int
+	export_to_s3    string
 }
+
+// Todo add a formated date function
 
 func get_env_var() snapshot_config {
 	// Get Env variables
@@ -77,6 +81,11 @@ func get_env_var() snapshot_config {
 		panic(err)
 	}
 
+	export_to_s3, validate := os.LookupEnv("EXPORT_TO_S3")
+	if !validate {
+		panic("You must set EXPORT_TO_S3")
+	}
+
 	my_snapshot_config := snapshot_config{
 		scw_access_key:  scw_access_key,
 		scw_secret_key:  scw_secret_key,
@@ -86,6 +95,7 @@ func get_env_var() snapshot_config {
 		snapshot_az:     snapshot_az,
 		disk_id:         disk_id,
 		snapshot_number: snapshot_number,
+		export_to_s3:    export_to_s3,
 	}
 
 	return my_snapshot_config
@@ -123,24 +133,30 @@ func priv_wait_for_snapshot(snapshot_id string, instanceApi *instance.API, zone 
 	return err
 }
 
-func priv_export_to_s3(snapshot_id string, snapshot_name string, bucket string, instanceApi *instance.API, zone scw.Zone) error {
-	// Export Snapshot to S3 Bucket
-	fmt.Println(time.Now(), "- Exporting Snapshot to:", bucket)
-	export_snapshot, err := instanceApi.ExportSnapshot(&instance.ExportSnapshotRequest{
-		Zone:       zone,
-		SnapshotID: snapshot_id,
-		Bucket:     bucket,
-		Key:        snapshot_name,
-	})
-	if err != nil {
+func priv_export_to_s3(snapshot_id string, snapshot_name string, instanceApi *instance.API, zone scw.Zone) error {
+	bucket, validate := os.LookupEnv("BUCKET_NAME")
+	if !validate {
+		err := errors.New("error, can't export snapshot to S3, you must set bucket_name")
 		return err
 	} else {
-		fmt.Println(time.Now(), "- Export task ID:", export_snapshot.Task.ID)
+		// Export Snapshot to S3 Bucket
+		fmt.Println(time.Now(), "- Exporting Snapshot to:", bucket)
+		export_snapshot, err := instanceApi.ExportSnapshot(&instance.ExportSnapshotRequest{
+			Zone:       zone,
+			SnapshotID: snapshot_id,
+			Bucket:     bucket,
+			Key:        snapshot_name,
+		})
+		if err != nil {
+			return err
+		} else {
+			fmt.Println(time.Now(), "- Export task ID:", export_snapshot.Task.ID)
 
-		// Wait for export
-		err = priv_wait_for_export(snapshot_id, instanceApi, zone)
+			// Wait for export
+			err = priv_wait_for_export(snapshot_id, instanceApi, zone)
 
-		return err
+			return err
+		}
 	}
 }
 
@@ -201,6 +217,10 @@ func main() {
 	// tags array
 	snapshot_tags := []string{"automatic"}
 
+	// Allow us to skip task if a previous task failed
+	// We always keep the cleaning task to avoid having too many snapshots
+	abort_mission := false
+
 	// Create a Scaleway client
 	client, err := scw.NewClient(
 		scw.WithDefaultOrganizationID(my_snapshot_config.organizationID),
@@ -217,31 +237,27 @@ func main() {
 	// Create Snapshot
 	snapshot_id, err := priv_create_snapshot(my_snapshot_config, snapshot_name, &snapshot_tags, instanceApi)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		abort_mission = true
 	}
 
-	// Wait for Snapshot createion
-	err = priv_wait_for_snapshot(snapshot_id, instanceApi, my_snapshot_config.snapshot_az)
-	if err != nil {
-		panic(err)
-	}
-
-	export_to_s3, validate := os.LookupEnv("EXPORT_TO_S3")
-	if !validate {
-		panic("You must set EXPORT_TO_S3")
-	}
-
-	// Export Snapshot to S3
-	if export_to_s3 == "true" {
-
-		bucket, validate := os.LookupEnv("BUCKET_NAME")
-		if !validate && export_to_s3 == "true" {
-			panic("You must set BUCKET_NAME")
-		}
-
-		err = priv_export_to_s3(snapshot_id, snapshot_name, bucket, instanceApi, my_snapshot_config.snapshot_az)
+	// Wait for Snapshot creation
+	if !abort_mission {
+		err = priv_wait_for_snapshot(snapshot_id, instanceApi, my_snapshot_config.snapshot_az)
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
+			abort_mission = true
+		}
+	}
+
+	if !abort_mission {
+		// Export Snapshot to S3
+		if my_snapshot_config.export_to_s3 == "true" {
+
+			err = priv_export_to_s3(snapshot_id, snapshot_name, instanceApi, my_snapshot_config.snapshot_az)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 
