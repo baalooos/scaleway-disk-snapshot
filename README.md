@@ -1,11 +1,13 @@
-# scaleway-disk-snapshot
+# Scaleway Disk Snapshot
 
-Go program to snapshot and export to S3 Scaleway disk.
+Serverless function to snapshot Disk and export the snapshot to S3.
 
 ## Usage
 
+- Install Serverless Framework using [the official documentation](https://www.serverless.com/framework/docs/getting-started)
 - Clone this repository
-- `go run .`
+- Export the required Environment Variables (see below)
+- `sls deploy`
 
 ## Environment Variables
 
@@ -24,4 +26,4 @@ This program read your env variables and expect to find the following variables:
 | EXPORT_TO_S3  | yes  | Do your want to export the snapshot to S3? Value is true/false|
 | BUCKET_NAME  | no  | Name of the bucket wwhere you want to store your snapshot |
 
-For more informations on Scaleway Zones and Region, please refer to: [https://registry.terraform.io/providers/scaleway/scaleway/2.38.1/docs/guides/regions_and_zones](Scaleway Regions)
+For more informations on Scaleway Zones and Region, please refer to: [Scaleway Regions](https://registry.terraform.io/providers/scaleway/scaleway/2.38.1/docs/guides/regions_and_zones)
