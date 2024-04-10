@@ -1,0 +1,29 @@
+service: scaleway-disk-snapshot
+configValidationMode: off
+provider:
+  name: scaleway
+  runtime: go121
+
+  secret:
+    MY_SCW_ACCESS_KEY: ${SCW_ACCESS_KEY}
+    MY_SCW_SECRET_KEY: ${SCW_SECRET_KEY}
+    MY_ORGANIZATION_ID: ${SCW_ORGANIZATION_ID}
+    MY_PROJECT_ID: ${PROJECT_ID}
+    MY_DEFAULT_REGION: ${DEFAULT_REGION}
+    MY_DEFAULT_AZ: ${DEFAULT_AZ}
+    MY_DISK_ID: ${DISK_ID}
+    MY_SNAPSHOT_NUMBER: ${SNAPSHOT_NUMBER}
+    MY_EXPORT_TO_S3: ${EXPORT_TO_S3}
+
+plugins:
+  - serverless-scaleway-functions
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!.gitignore"
+    - "!.git/**"
+
+functions:
+  mymodule:
+    handler: "Handle"

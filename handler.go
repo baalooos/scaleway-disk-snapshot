@@ -1,8 +1,9 @@
-package main
+package scalewayDiskSnapshot
 
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 
 	"os"
@@ -29,34 +30,34 @@ type snapshot_config struct {
 
 func get_env_var() snapshot_config {
 	// Get Env variables
-	scw_access_key, validate := os.LookupEnv("SCW_ACCESS_KEY")
+	scw_access_key, validate := os.LookupEnv("MY_SCW_ACCESS_KEY")
 	if !validate {
-		panic("You must set SCW_ACCESS_KEY")
+		panic("You must set MY_SCW_ACCESS_KEY")
 	}
-	scw_secret_key, validate := os.LookupEnv("SCW_SECRET_KEY")
+	scw_secret_key, validate := os.LookupEnv("MY_SCW_SECRET_KEY")
 	if !validate {
-		panic("You must set SCW_SECRET_KEY")
+		panic("You must set MY_SCW_SECRET_KEY")
 	}
-	organizationID, validate := os.LookupEnv("ORGANIZATION_ID")
+	organizationID, validate := os.LookupEnv("MY_ORGANIZATION_ID")
 	if !validate {
-		panic("You must set ORGANIZATION_ID")
+		panic("You must set MY_ORGANIZATION_ID")
 	}
-	project_id, validate := os.LookupEnv("PROJECT_ID")
+	project_id, validate := os.LookupEnv("MY_PROJECT_ID")
 	if !validate {
-		panic("You must set PROJECT_ID")
+		panic("You must set MY_PROJECT_ID")
 	}
-	default_region, validate := os.LookupEnv("DEFAULT_REGION")
+	default_region, validate := os.LookupEnv("MY_DEFAULT_REGION")
 	if !validate {
-		panic("You must set DEFAULT_REGION")
+		panic("You must set MY_DEFAULT_REGION")
 	}
 	//Get the region from the Env Variable
 	snapshot_region, err := scw.ParseRegion(default_region)
 	if err != nil {
-		panic(err)
+		panic("Your region should be one of: fr-par, nl-ams, pl-waw")
 	}
-	default_az, validate := os.LookupEnv("DEFAULT_AZ")
+	default_az, validate := os.LookupEnv("MY_DEFAULT_AZ")
 	if !validate {
-		panic("You must set DEFAULT_AZ")
+		panic("You must set MY_DEFAULT_AZ")
 	}
 	// Get the zone from the Env Variable
 	snapshot_az, err := scw.ParseZone(default_az)
@@ -68,22 +69,22 @@ func get_env_var() snapshot_config {
 		panic("The default_AZ must be in the Default_Region")
 	}
 
-	disk_id, validate := os.LookupEnv("DISK_ID")
+	disk_id, validate := os.LookupEnv("MY_DISK_ID")
 	if !validate {
-		panic("You must set DISK_ID")
+		panic("You must set MY_DISK_ID")
 	}
-	string_snapshot_number, validate := os.LookupEnv("SNAPSHOT_NUMBER")
+	string_snapshot_number, validate := os.LookupEnv("MY_SNAPSHOT_NUMBER")
 	if !validate {
-		panic("You must set SNAPSHOT_NUMBER")
+		panic("You must set MY_SNAPSHOT_NUMBER")
 	}
 	snapshot_number, err := strconv.Atoi(string_snapshot_number)
 	if err != nil {
 		panic(err)
 	}
 
-	export_to_s3, validate := os.LookupEnv("EXPORT_TO_S3")
+	export_to_s3, validate := os.LookupEnv("MY_EXPORT_TO_S3")
 	if !validate {
-		panic("You must set EXPORT_TO_S3")
+		panic("You must set MY_EXPORT_TO_S3")
 	}
 
 	my_snapshot_config := snapshot_config{
@@ -207,7 +208,7 @@ func priv_delete_snapshot(snapshot_id string, instanceApi *instance.API, zone sc
 	return err
 }
 
-func main() {
+func Handle(w http.ResponseWriter, r *http.Request) {
 
 	my_snapshot_config := get_env_var()
 
