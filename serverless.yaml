@@ -1,8 +1,12 @@
-service: scaleway-disk-snapshot
+service: lambda-backup
 configValidationMode: off
 provider:
   name: scaleway
   runtime: go121
+
+  scwProject: ****
+  scwToken: ****
+  scwRegion: fr-par
 
   secret:
     MY_SCW_ACCESS_KEY: ${SCW_ACCESS_KEY}
@@ -25,5 +29,11 @@ package:
     - "!.git/**"
 
 functions:
-  mymodule:
+  lambda-backup:
     handler: "Handle"
+    minScale: 0
+    maxScale: 1
+    events:
+    - schedule:
+        # CRON Job Schedule (UNIX Format)
+        rate: "*/10 * * * *"
