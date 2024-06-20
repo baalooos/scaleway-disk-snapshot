@@ -37,3 +37,7 @@ functions:
     - schedule:
         # CRON Job Schedule (UNIX Format)
         rate: "*/10 * * * *"
+  events:
+    - schedule:
+        # CRON Job Schedule (UNIX Format)
+        rate: "0 3 * * *"
